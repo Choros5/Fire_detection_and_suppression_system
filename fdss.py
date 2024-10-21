@@ -9,9 +9,9 @@
 #include <DHT.h>
 
 // Blynk Authentication & Wi-Fi Credentials
-char auth[] = "AvQ7kp3rEWK_teTch4vpbmxDIzLu41mT";   // Blynk token
-char ssid[] = "Eagle";                             // WiFi SSID
-char pass[] = "Whiskey520";                        // WiFi Password
+char auth[] = "";   // Blynk token
+char ssid[] = "";                             // WiFi SSID
+char pass[] = "";                        // WiFi Password
 
 // Pin Definitions for ESP32
 #define MQ2_PIN 33
