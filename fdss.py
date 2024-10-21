@@ -20,8 +20,8 @@ char pass[] = "Whiskey520";                        // WiFi Password
 #define BUZZER_PIN 14
 #define BUTTON_PIN 13
 #define WATER_PUMP_PIN 12
-#define CO2_LED_PIN 35
-#define HVAC_LED_PIN 18
+#define CO2_LED_PIN 5
+#define HVAC_LED_PIN 0
 #define SPEAKER_PIN 25  // Speaker will remain unused
 
 // Thresholds
@@ -36,6 +36,8 @@ BlynkTimer timer;                     // Blynk timer to handle periodic tasks
 bool flameDetected = false;            // Indicates if a flame is detected
 bool warningActive = false;            // Indicates when gas/temp/humidity exceeds threshold
 bool manualPumpControl = false;        // Tracks if the pump is manually controlled
+bool manualCO2Control = false;
+bool manualHVACControl = false;
 
 // SIM800L Serial Communication
 #define SIM800_RX_PIN 16  // Connect SIM800 TXD to ESP32 GPIO 16
@@ -133,7 +135,7 @@ void sensorCheck() {
     bool humidityWarning = humidity > THRESHOLD_HUMIDITY;
 
     // If any threshold is surpassed
-    if (gasWarning || tempWarning || humidityWarning) {
+    if (gasWarning || tempWarning || humidityWarning && !manualHVACControl) {
         digitalWrite(HVAC_LED_PIN, HIGH);  // Turn on HVAC system
         Blynk.virtualWrite(V1, HIGH);      // Update HVAC status on Blynk app
         lcd.setCursor(8, 1);
@@ -153,13 +155,13 @@ void sensorCheck() {
             Blynk.logEvent("humidity_warning", "Humidity exceeded threshold!");
         }
         
-    } else {
+    } else if(!manualHVACControl) {
         warningActive = false;  // Reset warning if thresholds are normal
         digitalWrite(HVAC_LED_PIN, LOW);   // Turn off HVAC if no warning
     }
 
     // If flame is detected and manual control is off
-    if (flameDetected && !manualPumpControl) {
+    if (flameDetected && !manualPumpControl && !manualCO2Control) {
         digitalWrite(WATER_PUMP_PIN, HIGH);  // Turn on water pump
         digitalWrite(CO2_LED_PIN, HIGH);     // Turn on CO2 system
         Blynk.virtualWrite(V2, HIGH);        // Update CO2 status on Blynk app
@@ -169,7 +171,7 @@ void sensorCheck() {
         activateAlert("FIRE");  // Trigger alert for fire detection
         Blynk.logEvent("fire_alert", "Fire detected! Immediate action required!");
         
-    } else if (!manualPumpControl) {
+    } else if (!manualPumpControl && !manualCO2Control) {
         digitalWrite(WATER_PUMP_PIN, LOW);   // Turn off water pump if no flame and no manual control
         digitalWrite(CO2_LED_PIN, LOW);      // Turn off CO2 system
     }
@@ -179,8 +181,10 @@ void sensorCheck() {
 BLYNK_WRITE(V1) {
     int hvacControl = param.asInt();  // Read button state from Blynk app
     if (hvacControl == 1) {
+      manualHVACControl = true;
         digitalWrite(HVAC_LED_PIN, HIGH);  // Turn on HVAC system
     } else {
+        manualHVACControl = false;
         digitalWrite(HVAC_LED_PIN, LOW);   // Turn off HVAC system
     }
 }
@@ -189,8 +193,10 @@ BLYNK_WRITE(V1) {
 BLYNK_WRITE(V2) {
     int ledControl = param.asInt();  // Read button state from Blynk app
     if (ledControl == 1) {
+        manualCO2Control = true;
         digitalWrite(CO2_LED_PIN, HIGH);  // Turn on LED
     } else {
+        manualCO2Control = false;
         digitalWrite(CO2_LED_PIN, LOW);   // Turn off LED
     }
 }
